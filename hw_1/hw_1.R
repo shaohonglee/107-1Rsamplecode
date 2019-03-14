@@ -1,4 +1,4 @@
-setwd("~/GitHub/Politics-and-information")
+setwd("~/GitHub")
 library(dplyr)
 library(tm)
 
