@@ -41,32 +41,30 @@ top10$Date[[1]][2]
 
 sub_str=data.frame(substr(x=top10$Message,1,regexpr("選舉",top10$Message)+1)) #字串尋找並切割 
 top10$id=paste(top10$Page_ID,top10$created_time,sep = "@") # 合併
+aaa=chen%>%group_by(Type)%>%count(LIKE_COUNT)
+table(chen$Type)%>%prop.table()%>%round(3) # type 比例
+table(han$Type)%>%prop.table()%>%round(3)
 
+boxplot()
 #########################################################################
 
 #############################################################    
 han$Date=as.POSIXct(han$Date,format="%Y/%m/%d %H:%M:%S")
 chen$Date=as.POSIXct(chen$Date,format="%Y/%m/%d %H:%M:%S")
-###########################################################
 
-layout(matrix(c(1,1,1,2,2,2),2,3,byrow = T))
-plot(han$Date,han$Comment_Count,type = "l")
-lines(chen$Date,chen$Comment_Count,type = "l",col="red")
-plot(chen$Date,chen$LIKE_COUNT,type = "l",col="blue")
-lines(han$Date,han$LIKE_COUNT,type = "l",col="yellow")
-library(corrplot)
-library(ggpubr)
-par(mfrow=c(1,1))
+###########################################################
 ## r 相關係數 
 # 介於-1~1  >0正相關  <0負相關
 
 ## p value H0為真的機率，當你設立一個假說「男生身高跟女生身高有沒有差」
 # 我們先設立一個虛無假設H0:男生身高=女生身高
 # 當P value越小 H0越不可能成真 那當初設立的假說就可以證明「男生身高跟女生身高有差」
+han$mes_nchar=nchar(han$Message)
+chen$mes_nchar=nchar(chen$Message)
 ggscatter(chen,x="All_Reaction_Count",y="LIKE_COUNT", add = "reg.line", conf.int = TRUE, 
           cor.coef = TRUE, cor.method = "pearson")
 ggqqplot(chen$All_Reaction_Count)  #常態分佈
 ggqqplot(chen$LIKE_COUNT)          #常態分佈
 
-cor(chen[6:14])%>%corrplot.mixed(lower = "pie",tl.cex=0.6)
+cor(chen[c(6:14,19)])%>%corrplot.mixed(lower = "pie",tl.cex=0.6)
 # method = c("pearson", "kendall", "spearman")

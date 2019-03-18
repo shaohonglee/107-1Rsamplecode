@@ -27,7 +27,7 @@ summary(cars)
 You can also embed plots, for example:
 
 
-```{r pressure, echo=T}
+```{r pressure, echo=F}
 plot(pressure)
 ```
 
@@ -40,6 +40,10 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 print('This is a chunk')
 ```
 
+```{r}
+
+```
+
 <hr>
 
 ### 引用其他語言
@@ -49,6 +53,7 @@ print('This is a chunk')
 test=[1,2,3,4,5]
 print(test[2])
 ```
+
 # title1
 ## title2
 ### title3

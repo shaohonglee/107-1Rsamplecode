@@ -43,9 +43,7 @@ han$artTime=paste0(han$artDate,han$artTime)
 ```{r}
 date_split=strsplit(chen$artTime,"[[:blank:]]|/")
 date_split[[1]]
-for(i in 1:123){
-print(date_split[[i]][1])
-}
+
 ```
 ### POSIXct轉換時間格式
 ```{r}
@@ -87,18 +85,22 @@ hanCount<-han%>%group_by(month=format(artTime,"%m"))%>%count()%>%mutate(type="ha
 
 month_rank=rbind(chenCount,hanCount)%>%arrange((month))
 
+###BAR
 ggplot(month_rank,aes(x=month,y=n,fill=type))+
   geom_bar(stat="identity",position = "dodge")
 
-ggplot(month_rank,aes(x=month,y=n,group=type,color=type))+
-  geom_line()
+###LINE
+ggplot(month_rank,aes(x=month,y=n,group=type,color=type))+geom_line()
 
-chen_poster=chen%>%group_by(poster=chen$artPoster)%>%count()%>%arrange(desc(n))
-han_poster=han%>%group_by(poster=han$artPoster)%>%count()%>%arrange(desc(n))
+###BOXPLOT
+ggplot(month_rank,aes(x=month,y=n))+
+  geom_boxplot()
 
+### POINT
 ggplot(head(chen_poster,10),aes(x=poster,y=n))+
   geom_point()
 
+### HISTGRAM
 ggplot(head(han_poster,10),aes(x=n))+
   geom_histogram(bins = 50)+
   scale_x_continuous(breaks=seq(20,60,5))
