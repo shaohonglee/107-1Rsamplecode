@@ -1,0 +1,111 @@
+---
+title: "Dataframe manipulate"
+output: html_document
+---
+
+```{r setup,warning=F}
+knitr::opts_chunk$set(warning = F)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+install.packages("data.table")
+install.packages("ggplot2")
+#https://blog.yjtseng.info/post/regexpr/
+```
+### 讀檔
+```{r}
+all=data.table::fread("All.csv",data.table = F,encoding = "UTF-8")
+```
+### filter過濾 & subset 子集合
+```{r}
+##filter delete rowname
+##subset keep   rowname
+han=filter(all,grepl("韓國瑜|國瑜|韓總|韓導",all$artTitle)==T)
+han2=subset(all,grepl("韓國瑜|國瑜|韓總|韓導",all$artTitle)==T,select=c('artTitle'))
+```
+### grep & grepl 字串搜尋
+```{r}
+##grep&grepl
+##return position & return TRUE/FALSE
+chen=filter(all,grepl("陳其邁|其邁|陳78",all$artTitle)==T)
+chen2=all[grep("陳其邁|其邁|陳78",all$artTitle),]
+both=filter(all,grepl("陳其邁|其邁|陳78",all$artTitle)==T&grepl("韓國瑜|國瑜|韓總|韓導",all$artTitle)==T)
+
+```
+### paste & paste0 複製貼上
+```{r}
+## paste&paste0
+## could set sep & sep=""
+chen$artTime=paste(chen$artDate,chen$artTime, sep=" ")
+han$artTime=paste0(han$artDate,han$artTime)
+```
+### strsplit切割字串 
+```{r}
+date_split=strsplit(chen$artTime,"[[:blank:]]|/")
+date_split[[1]]
+for(i in 1:123){
+print(date_split[[i]][1])
+}
+```
+### POSIXct轉換時間格式
+```{r}
+chen$artTime=as.POSIXct(chen$artTime,format = '%Y/%m/%d %H:%M:%S')
+han$artTime=as.POSIXct(han$artTime,format = '%Y/%m/%d%H:%M:%S')
+chen$artDate=NULL
+han$artDate=NULL
+
+```
+### 計算字串長度
+```{r}
+mean(nchar(chen$sentence))
+mean(nchar(han$sentence))
+```
+### sub & gsub 替換字元
+```{r}
+## sub  replace first corresponding pattern
+## gsub replace all corresponding pattern
+
+head(han$sentence)
+han$sentence=gsub(pattern = "\r|\n",replacement="",x=han$sentence)
+#head(han$sentence)
+```
+### regexpr & gregexpr 定址 & substr 子字串
+```{r}
+regexpr("選舉",han$sentence)[1:6]
+reg_str=data.frame(substr(x=han$sentence,1,regexpr("選舉",han$sentence)+1))
+
+gregexpr("選舉",han$sentence)[[1]]
+gregexpr("選舉",han$sentence)[[2]]
+gregexpr("選舉",han$sentence)[[1]][length(gregexpr("選舉",han$sentence)[[1]])]
+
+```
+
+### dplyr & ggplot
+```{r}
+chenCount<-chen%>%group_by(month=format(artTime,"%m"))%>%count()%>%mutate(type="chen")
+hanCount<-han%>%group_by(month=format(artTime,"%m"))%>%count()%>%mutate(type="han")
+
+month_rank=rbind(chenCount,hanCount)%>%arrange((month))
+
+ggplot(month_rank,aes(x=month,y=n,fill=type))+
+  geom_bar(stat="identity",position = "dodge")
+
+ggplot(month_rank,aes(x=month,y=n,group=type,color=type))+
+  geom_line()
+
+chen_poster=chen%>%group_by(poster=chen$artPoster)%>%count()%>%arrange(desc(n))
+han_poster=han%>%group_by(poster=han$artPoster)%>%count()%>%arrange(desc(n))
+
+ggplot(head(chen_poster,10),aes(x=poster,y=n))+
+  geom_point()
+
+ggplot(head(han_poster,10),aes(x=n))+
+  geom_histogram(bins = 50)+
+  scale_x_continuous(breaks=seq(20,60,5))
+
+## http://www.learn-r-the-easy-way.tw/chapters/14
+##boxplot
+```
+
+
+

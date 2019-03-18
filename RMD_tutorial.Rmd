@@ -1,0 +1,84 @@
+---
+title: "RMD_tutorial"
+author: "Eric Lee"
+date: "2019年3月14日"
+output: html_document
+---
+
+```{r setup,include=F,warning=F}
+knitr::opts_chunk$set(warning = F)
+## global chunk setting
+## echo means printing code or not
+## warning means printing warning message or not
+```
+
+### R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+### Including Plots
+
+You can also embed plots, for example:
+
+
+```{r pressure, echo=T}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+<hr>
+
+### 增加一個chunk (ctrl+alt+i)
+```{r}
+print('This is a chunk')
+```
+
+<hr>
+
+### 引用其他語言
+```{python}
+#javascript css shell sql C 
+#https://bookdown.org/yihui/rmarkdown/language-engines.html
+test=[1,2,3,4,5]
+print(test[2])
+```
+# title1
+## title2
+### title3
+
+<hr>
+
+### 插入圖片
+![大帥哥](Lee.jpg){width="200px" height="100px"}
+
+### 插入連結
+[Rstudio markdown](https://rmarkdown.rstudio.com/authoring_basics.html)
+
+[Markdown cheatsheet](https://www.rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf)
+
+[Dashboard](https://rmarkdown.rstudio.com/flexdashboard/)
+
+### 插入清單
+
+1. 好動
+1. 健談
+1. 123
+    * 幽默
+    * 率性
+- 真誠
+- 正直
+    + 認真
+    + 有禮
+    
+------------------------------------------------------
+
+### 這筆資料有`r nrow(cars)`筆 
+**這是粗體**
+*這是斜體*
