@@ -5,12 +5,9 @@ output: html_document
 
 ```{r setup,warning=F}
 knitr::opts_chunk$set(warning = F)
-library(dplyr)
-library(data.table)
-library(ggplot2)
-install.packages("data.table")
-install.packages("ggplot2")
-#https://blog.yjtseng.info/post/regexpr/
+if(!require(dplyr)) install.packages("dplyr")
+if(!require(data.table)) install.packages("data.table")
+if(!require(ggplot2)) install.packages("ggplot2")
 ```
 ### 讀檔
 ```{r}
@@ -82,8 +79,10 @@ gregexpr("選舉",han$sentence)[[1]][length(gregexpr("選舉",han$sentence)[[1]]
 ```{r}
 chenCount<-chen%>%group_by(month=format(artTime,"%m"))%>%count()%>%mutate(type="chen")
 hanCount<-han%>%group_by(month=format(artTime,"%m"))%>%count()%>%mutate(type="han")
-
 month_rank=rbind(chenCount,hanCount)%>%arrange((month))
+
+chen_poster=chen%>%group_by(artPoster)%>%count()%>%arrange(desc(n))
+han_poster=han%>%group_by(artPoster)%>%count()%>%arrange(desc(n))
 
 ###BAR
 ggplot(month_rank,aes(x=month,y=n,fill=type))+
@@ -97,7 +96,7 @@ ggplot(month_rank,aes(x=month,y=n))+
   geom_boxplot()
 
 ### POINT
-ggplot(head(chen_poster,10),aes(x=poster,y=n))+
+ggplot(head(chen_poster,10),aes(x=artPoster,y=n))+
   geom_point()
 
 ### HISTGRAM

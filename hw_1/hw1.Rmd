@@ -1,0 +1,118 @@
+---
+title: "Politics and Information HW1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F)
+```
+## 匯入 Library
+```{r}
+if(!require(dplyr)) library(dplyr)
+if(!require(data.table)) library(data.table)
+if(!require(corrplot)) library(corrplot)
+if(!require(ggpubr)) install.packages(ggpubr)
+```
+
+## 匯入Data
+```{r}
+## 檔案路徑請自行依照檔案在電腦內的位置更改
+data_201801=data.table::fread('~/GitHub/data/201801_data.csv',data.table = F,encoding = 'UTF-8')
+data_201802=data.table::fread('~/GitHub/data/201802_data.csv',data.table = F,encoding = 'UTF-8')
+data_201803=data.table::fread('~/GitHub/data/201803_data.csv',data.table = F,encoding = 'UTF-8')
+data_201804=data.table::fread('~/GitHub/data/201804_data.csv',data.table = F,encoding = 'UTF-8')
+data_201805=data.table::fread('~/GitHub/data/201805_data.csv',data.table = F,encoding = 'UTF-8')
+data_201806=data.table::fread('~/GitHub/data/201806_data.csv',data.table = F,encoding = 'UTF-8')
+data_201807=data.table::fread('~/GitHub/data/201807_data.csv',data.table = F,encoding = 'UTF-8')
+data_201808=data.table::fread('~/GitHub/data/201808_data.csv',data.table = F,encoding = 'UTF-8')
+data_201809=data.table::fread('~/GitHub/data/201809_data.csv',data.table = F,encoding = 'UTF-8')
+data_201810=data.table::fread('~/GitHub/data/201810_data.csv',data.table = F,encoding = 'UTF-8')
+data_201811=data.table::fread('~/GitHub/data/201811_data.csv',data.table = F,encoding = 'UTF-8')
+data_201812=data.table::fread('~/GitHub/data/201812_data.csv',data.table = F,encoding = 'UTF-8')
+
+alldata=rbind(data_201801,data_201802,data_201803,data_201804,data_201805,data_201806,data_201807,data_201808,data_201809,data_201810,data_201811,data_201812)
+
+```
+## 時間前處理
+
+```{r}
+alldata$Date=as.POSIXct(alldata$Date,format="%Y/%m/%d %H:%M:%S")
+```
+
+
+## 總體檔案的統計
+```{r}
+# top 10 article source
+page_count=alldata%>%group_by(Page_Name)%>%count()%>%arrange(desc(n))%>%filter(n>100)
+head(page_count,10)
+
+# 平均內文字數 
+mean(nchar(alldata$Message))
+# PO文類型統計
+datatype=alldata%>%group_by(Type)%>%count()
+label_value <- paste('(', round(datatype$n/sum(datatype$n) * 100, 1), '%)', sep = '')
+label=paste(datatype$Type,label_value,sep = "")
+ggplot(datatype, aes(x="", y=n, fill=Type)) +
+       geom_bar(width = 1, stat = "identity") +
+       coord_polar("y", start=0)+
+       labs(x = '', y = '', title = '')+
+       theme(axis.text = element_blank())+
+       scale_fill_discrete(labels = label)
+# 1~12月的PO文變化
+allpostcount=alldata%>%group_by(month=format(Date,"%m"))%>%count()
+ggplot(allpostcount,aes(x=month,y=n))+
+  geom_bar(stat = "identity")
+```
+
+## 從alldata切出自行需要的檔案
+```{r}
+##  grepl 模糊比對
+han=filter(alldata,grepl("韓國瑜",alldata$Page_Name)==T&grepl("韓國瑜粉絲團",alldata$Page_Name)==F&grepl("韓國瑜新聞網",alldata$Page_Name)==F&grepl("高雄選韓國瑜News",alldata$Page_Name)==F&grepl("侯友宜 盧秀燕 韓國瑜 北中南連線",alldata$Page_Name)==F&grepl("高雄在地韓國瑜News",alldata$Page_Name)==F)
+
+##  絕對比對
+han=filter(alldata,alldata$Page_Name=="韓國瑜")%>%mutate(group="han")
+chen=filter(alldata,alldata$Page_Name=="陳其邁 Chen Chi-Mai")%>%mutate(group="chen")
+kao=rbind(han,chen)
+```
+## 作圖
+```{r}
+chencount=chen%>%group_by(month=format(Date,"%m"))%>%count()%>%mutate(group="chen")
+hancount=han%>%group_by(month=format(Date,"%m"))%>%count()%>%mutate(group="han")
+monthcount=rbind(chencount,hancount)%>%arrange((month))
+## han chen 每月PO文次數
+ggplot(monthcount,aes(x=month,y=n,fill=group))+
+  geom_bar(stat="identity",position = "dodge")
+
+## Type ratio
+kaotype=kao%>%group_by(Type)%>%count()
+label_value <- paste('(', round(kaotype$n/sum(kaotype$n) * 100, 1), '%)', sep = '')
+label=paste(kaotype$Type,label_value,sep = "")
+ggplot(kaotype, aes(x="", y=n, fill=Type)) +
+       geom_bar(width = 1, stat = "identity") +
+       coord_polar("y", start=0)+
+       labs(x = '', y = '', title = '')+
+       theme(axis.text = element_blank())+
+       scale_fill_discrete(labels = label)
+## Type&WOW COUNT BOXPLOT
+ggplot(kao,aes(x=Type,y=WOW_COUNT))+
+  geom_boxplot()
+
+
+```
+
+## correlation
+
+```{r}
+ggqqplot(chen$All_Reaction_Count)  #常態分佈
+ggqqplot(chen$LIKE_COUNT)          #常態分佈
+## 觀察數值是否為常態分佈 是否有離群值
+cor(chen[c(6:14)])%>%corrplot.mixed(lower = "pie",tl.cex=0.6)
+cor(han[c(6:14)])%>%corrplot.mixed(lower = "pie",tl.cex=0.6)
+cor(kao[c(6:14)])%>%corrplot.mixed(lower = "pie",tl.cex=0.6)
+## 挑出correlation中相關係數較顯著的  觀察其圖型為何
+ggscatter(chen,x="All_Reaction_Count",y="LIKE_COUNT", add = "reg.line", conf.int = TRUE,cor.coef = TRUE, cor.method = "pearson")
+ggscatter(chen,x="All_Reaction_Count",y="LOVE_COUNT", add = "reg.line", conf.int = TRUE,cor.coef = TRUE, cor.method = "pearson")
+ggscatter(chen,x="Comment_Count",y="LOVE_COUNT", add = "reg.line", conf.int = TRUE,cor.coef = TRUE, cor.method = "pearson")
+
+```
+

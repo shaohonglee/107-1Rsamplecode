@@ -1,7 +1,8 @@
 setwd("~/GitHub")
 library(dplyr)
-library(tm)
-
+library(corrplot)
+install.packages("ggpubr")
+library(ggpubr)
 
 data_201801=data.table::fread('data/201801_data.csv',data.table = F,encoding = 'UTF-8')
 data_201802=data.table::fread('data/201802_data.csv',data.table = F,encoding = 'UTF-8')
@@ -41,11 +42,11 @@ top10$Date[[1]][2]
 
 sub_str=data.frame(substr(x=top10$Message,1,regexpr("選舉",top10$Message)+1)) #字串尋找並切割 
 top10$id=paste(top10$Page_ID,top10$created_time,sep = "@") # 合併
-aaa=chen%>%group_by(Type)%>%count(LIKE_COUNT)
-table(chen$Type)%>%prop.table()%>%round(3) # type 比例
-table(han$Type)%>%prop.table()%>%round(3)
 
-boxplot()
+
+table(chen$Type)%>%prop.table()%>%round(3) # type 比例
+table(han$Type)%>%prop.table()%>%round(3)  
+
 #########################################################################
 
 #############################################################    
@@ -53,9 +54,9 @@ han$Date=as.POSIXct(han$Date,format="%Y/%m/%d %H:%M:%S")
 chen$Date=as.POSIXct(chen$Date,format="%Y/%m/%d %H:%M:%S")
 
 ###########################################################
+
 ## r 相關係數 
 # 介於-1~1  >0正相關  <0負相關
-
 ## p value H0為真的機率，當你設立一個假說「男生身高跟女生身高有沒有差」
 # 我們先設立一個虛無假設H0:男生身高=女生身高
 # 當P value越小 H0越不可能成真 那當初設立的假說就可以證明「男生身高跟女生身高有差」
