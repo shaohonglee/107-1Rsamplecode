@@ -114,5 +114,13 @@ ggscatter(chen,x="All_Reaction_Count",y="LIKE_COUNT", add = "reg.line", conf.int
 ggscatter(chen,x="All_Reaction_Count",y="LOVE_COUNT", add = "reg.line", conf.int = TRUE,cor.coef = TRUE, cor.method = "pearson")
 ggscatter(chen,x="Comment_Count",y="LOVE_COUNT", add = "reg.line", conf.int = TRUE,cor.coef = TRUE, cor.method = "pearson")
 
+summary(kao)
+
 ```
+
+
+
+
+
+
 

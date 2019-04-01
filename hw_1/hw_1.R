@@ -69,3 +69,5 @@ ggqqplot(chen$LIKE_COUNT)          #常態分佈
 
 cor(chen[c(6:14,19)])%>%corrplot.mixed(lower = "pie",tl.cex=0.6)
 # method = c("pearson", "kendall", "spearman")
+table(label)
+label=label[names(table(label))=="link(5.6%)"]

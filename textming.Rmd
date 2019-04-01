@@ -1,0 +1,276 @@
+---
+title: "韓國瑜 & 陳其邁 2018 年 9 月臉書資料文本分析"
+author: "Pecu Tsai"
+date: "2019年3月25日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+packages = c("dplyr", "tidytext", "jiebaR", "gutenbergr", "stringr", "wordcloud2", "ggplot2", "tidyr", "scales")
+existing = as.character(installed.packages()[,1])
+for(pkg in packages[!(packages %in% existing)]) install.packages(pkg)
+```
+
+## 讀取 2018 年 9 月的臉書資料 (Q Search 提供)
+## 只取出貼文是含有 Video 的部分來進行分析
+```{r read, message=FALSE, warning=FALSE}
+library(readr)
+X201809_data <- read_csv('~/GitHub/data/201809_data.csv')
+library(tidyverse)
+VideoMatrix = filter(X201809_data, Type == "video")
+Hvideo = filter(VideoMatrix, grepl("韓國瑜", VideoMatrix$Page_Name) == TRUE)
+Cvideo = filter(VideoMatrix, grepl("陳其邁", VideoMatrix$Page_Name) == TRUE)
+Hcomment = Hvideo[,c(2,13,15)]
+Ccomment = Cvideo[,c(2,13,15)]
+HCComment = rbind(Hcomment, Ccomment)
+library(kableExtra)
+kable(head(HCComment))
+```
+
+## 畫出韓國瑜 & 陳其邁的發文數量以及讀者回文數量
+```{r plot, message=FALSE, warning=FALSE}
+library(ggplot2)
+ggplot() + geom_bar( data = HCComment, aes(x=Page_Name) )
+ggplot() + geom_bar( data = HCComment, 
+                     aes(x=Page_Name, y=Comment_Count, group = Page_Name),
+                     stat="identity")
+```
+
+陳其邁在 Video 的發文數比韓國瑜多，但韓國瑜的回文數卻高於陳其邁，需要討論，2018年九月韓國瑜竄起時，為何會有這麼多回文，遠高於長期耕耘高雄的陳其邁？
+
+## 依照 page 來源，將同一 page 不同發文時間的文章進行合併
+```{r post, message=FALSE, warning=FALSE}
+HCmessage = HCComment %>% group_by(Page_Name) %>% 
+  mutate(messageByName = paste0(Message, collapse = ""))
+id = which(duplicated(HCmessage$Page_Name) == FALSE)
+HCmessageAll = HCmessage[id,c(1,4)]
+kable(head(HCmessageAll))
+```
+
+
+```{r}
+X201809_data$Message[1]
+gsub("[^[:alpha:]]",replacement = "",X201809_data$Message[1])
+gsub("[^[:alpha:]]|[A-Za-z]",replacement = "",X201809_data$Message[1])
+
+```
+
+
+
+## 清洗內文，只留下中文字後進行斷詞，只取出詞長度為兩字以上的詞
+```{r jieba, message=FALSE, warning=FALSE}
+library(jiebaRD)
+library(jiebaR)
+cutter <- worker("tag")
+#tag 詞性標註
+?worker
+# 自建字典
+dic = c("韓國瑜", "國瑜", "高雄人")
+new_user_word(cutter, dic)
+myFUN<- function(str) {
+  str = gsub("[A-Za-z0-9]", "", str)
+  seg = cutter[str]
+  id = which(nchar(seg) > 1)
+  result = seg[id]
+}
+segment = apply(matrix(HCmessageAll$messageByName), MARGIN = 1, myFUN)
+# MARGIN 1:按行計算 2按列計算
+```
+
+```{r}
+cc=worker(bylines=T)
+new_user_word(cc,"國瑜","n")
+new_user_word(cc,"陳其邁","n")
+sd=segment(HCmessageAll$messageByName,cc)
+
+
+#delete stopwords  add userwords
+
+cd=worker(stop_word = "stopwords-u8.txt",user = "user.txt",encoding = "UTF-8",bylines = T)
+td=segment(HCmessageAll$messageByName,cd)
+```
+## tf-idf & tidytext
+
+```{r}
+library(tidytext)
+library(wordcloud2)
+sw=read.table("stopwords-u8.txt", header = F,sep="\r",quote = "", stringsAsFactors = F,encoding = "UTF-8")
+colnames(sw)="word"
+td1 <-  X201809_data%>%
+  unnest_tokens(word, Message)%>%
+  anti_join(sw,by="word")%>%
+  count(Type,word, sort = TRUE)
+tfidf1=td1 %>%
+  bind_tf_idf(word, Type, n)
+t1=tfidf1%>%
+  arrange(desc(tf_idf))
+
+head(td1,50)%>%select("word","n")%>%wordcloud2()
+
+
+```
+
+
+
+## 以原始的 DTM 製作出 LDA (Latent Dirichlet Allocation) 主題歸納 (從文集中抽取隱藏「主題」thematic structures 的技術方法)
+```{r lda, message=FALSE, warning=FALSE}
+# 韓國瑜相關的 page 有三個
+R = table(segment[[1]])
+L = table(segment[[2]])
+M_R = merge(x = R, y = L, by = "Var1", all = TRUE)
+DTM_H = merge(x = M_R, y = table(segment[[3]]), by = "Var1", all = TRUE)
+DTM_H[is.na(DTM_H)] <- 0
+rownames(DTM_H) = DTM_H$Var1
+DTM_H = DTM_H[,-1]
+tdtm=t(DTM_H)
+```
+
+
+```{r}
+library(NLP)
+library(tm)
+s=Corpus(VectorSource(td))
+dtm=DocumentTermMatrix(s)
+
+```
+
+# 畫出韓國瑜發文的主題歸納
+```{r}
+library(topicmodels)
+dtm_lda <- LDA(t(DTM_H), k = 8, control = list(seed = 1234))
+library(tidytext)
+dtm_topics <- tidy(dtm_lda, matrix = "beta")
+dtm_topics%>%group_by(topic)%>%summarise(sum(beta))
+top_terms <- dtm_topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+top_terms %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  theme(axis.text.y=element_text(colour="black", family="Heiti TC Light"))
+# 陳其邁相關的 page 有一個
+DTM_C = merge(x = table(segment[[4]]), y = table(segment[[3]]), by = "Var1", all = TRUE)
+DTM_C[is.na(DTM_C)] <- 0
+rownames(DTM_C) = DTM_C$Var1
+DTM_C = DTM_C[,-1]
+# 畫出陳其邁發文與韓國瑜粉絲志工的主題歸納
+library(topicmodels)
+dtm_lda <- LDA(t(DTM_C), k = 8, control = list(seed = 1234))
+library(tidytext)
+dtm_topics <- tidy(dtm_lda, matrix = "beta")
+top_terms <- dtm_topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+top_terms %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  theme(axis.text.y=element_text(colour="black", family="Heiti TC Light"))
+```
+
+## 檢查一下目前的詞頻排序，分別排出各 page 的前 20 大詞頻字
+```{r freq}
+HCmessageAll$Page_Name[1]
+HC1 = head(sort(table(segment[[1]]), decreasing=T), 20)
+HC1
+HCmessageAll$Page_Name[2]
+HC2 = head(sort(table(segment[[2]]), decreasing=T), 20)
+HC2
+HCmessageAll$Page_Name[3]
+HC3 = head(sort(table(segment[[3]]), decreasing=T), 20)
+HC3
+HCmessageAll$Page_Name[4]
+HC4 = head(sort(table(segment[[4]]), decreasing=T), 20)
+HC4
+```
+
+## 將各 page 中的前二十大詞頻字進行聯集，建立 term-document matrix
+```{r DTM, message=FALSE, warning=FALSE}
+tempTAB_R = merge(x = HC1, y = HC2, by = "Var1", all = TRUE)
+tempTAB_L = merge(x = HC3, y = HC4, by = "Var1", all = TRUE)
+NewTAB = merge(x = tempTAB_R, y = tempTAB_L, by = "Var1", all = TRUE)
+colnames(NewTAB) = c("words", HCmessageAll$Page_Name)
+rownames(NewTAB) = NewTAB$words
+NewTAB = NewTAB[,-1]
+NewTAB[is.na(NewTAB)] <- 0
+kable(NewTAB)
+```
+
+## 以此 DTM 畫出共現性關聯圖
+```{r coMatrix, message=FALSE, warning=FALSE}
+CoMatrix = as.matrix(NewTAB) %*% t(as.matrix(NewTAB))
+total_occurrences <- rowSums(CoMatrix)
+smallid = which(total_occurrences < median(total_occurrences))
+co_occurrence_d = CoMatrix / total_occurrences
+co_occurrence_s = co_occurrence_d[-as.vector(smallid),-as.vector(smallid)]
+require(igraph)
+graph <- graph.adjacency(round(co_occurrence_s*10),
+                         mode="undirected",
+                         diag=FALSE)
+plot(graph,
+     vertex.label=names(data),
+     edge.arrow.mode=0,
+     vertex.size=1,
+     edge.width=E(graph)$weight,
+     layout=layout_with_fr)
+```
+
+觀察共現性圖與詞頻表的對照結果，韓國瑜關心的是經濟與大眾，而陳其邁對高雄市的建設雖然有許多想法，但可能因為選民對於複雜的內容越來越沒有閱讀的耐性，使得陳其邁的 video 文本分析結果，豐富的建設用詞卻無法獲得像韓國瑜一樣的回應熱烈。
+
+## 將名詞 (n), 動詞 (v), 形容詞 (a) 留下，剩下單詞省略不看。並將以上四個不同 page 的所留下的單詞聯集成 term-document matrix
+```{r pos, message=FALSE, warning=FALSE}
+needTag = c("n", "v", "a")
+myPOS <- function(vec) {
+  TagName = names(vec)
+  id = NULL
+  for( i in length(needTag) ) {
+    temp = which(TagName == needTag[i])
+    id = c(id, temp)
+  }
+  result = vec[id]
+}
+posResult = lapply(segment, myPOS)
+tempTAB_right = table(posResult[[1]])
+tempTAB_left = table(posResult[[2]])
+tempTAB_R = merge(x = tempTAB_right, y = tempTAB_left, by = "Var1", all = TRUE)
+tempTAB_right = table(posResult[[3]])
+tempTAB_left = table(posResult[[4]])
+tempTAB_L = merge(x = tempTAB_right, y = tempTAB_left, by = "Var1", all = TRUE)
+NewTAB = merge(x = tempTAB_R, y = tempTAB_L, by = "Var1", all = TRUE)
+colnames(NewTAB) = c("words", HCmessageAll$Page_Name)
+rownames(NewTAB) = NewTAB$words
+NewTAB = NewTAB[,-1]
+NewTAB[is.na(NewTAB)] <- 0
+kable(NewTAB)
+```
+
+## 以此 DTM 畫出共現性關聯圖
+```{r coMatrix_nav, message=FALSE, warning=FALSE}
+CoMatrix = as.matrix(NewTAB) %*% t(as.matrix(NewTAB))
+total_occurrences <- rowSums(CoMatrix)
+smallid = which(total_occurrences < median(total_occurrences))
+co_occurrence_d = CoMatrix / total_occurrences
+co_occurrence_s = co_occurrence_d[-as.vector(smallid),-as.vector(smallid)]
+require(igraph)
+graph <- graph.adjacency(round(co_occurrence_s*10),
+                         mode="undirected",
+                         diag=FALSE)
+plot(graph,
+     vertex.label=names(data),
+     edge.arrow.mode=0,
+     vertex.size=1,
+     edge.width=E(graph)$weight,
+     layout=layout_with_fr)
+```
+
+觀察共現性圖與詞頻表的對照結果，韓國瑜慣用的詞彙較簡單，而陳其邁的用詞複雜，有可能因為選民對於複雜的內容越來越沒有閱讀的耐性，使得陳其邁的 video 文本分析結果，文藻華麗卻無法獲得像韓國瑜一樣的回應熱烈。
