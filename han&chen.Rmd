@@ -16,6 +16,7 @@ library(ggplot2)
 library(gridExtra)
 library(corrplot)
 library(wordcloud2)
+library(wordcloud)
 library(ggpubr)
 library(topicmodels)
 library(tidytext)
@@ -135,15 +136,18 @@ segment_chen= apply(matrix(chen_msg$messageByName), MARGIN = 1, myFUN)
 hanfreq=data.frame(table(segment_han[[1]]))
 chenfreq=data.frame(table(segment_chen[[1]]))
 
-top_han=hanfreq%>%arrange(desc(Freq))%>%head(30)
-top_chen=chenfreq%>%arrange(desc(Freq))%>%head(30)
-top_han%>%wordcloud2()
-top_chen%>%wordcloud2()
-
+top_han=hanfreq%>%arrange(desc(Freq))%>%head(150)
+top_chen=chenfreq%>%arrange(desc(Freq))%>%head(150)
+wordcloud(top_chen$Var1,top_chen$Freq)
+wordcloud(top_han$Var1,top_han$Freq)
 ```
+
+
 
 ## 做出字詞關聯圖
 ```{r}
+top_han=top_han%>%head(30)
+top_chen=top_chen%>%head(30)
 topword=merge(top_chen,top_han,by="Var1",all = TRUE)
 colnames(topword) = c("words","chen","han")
 rownames(topword) = topword$words
