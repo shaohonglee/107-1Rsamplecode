@@ -6,6 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+Sys.setlocale(category = "LC_ALL", locale = "zh_TW.UTF-8")
 knitr::opts_chunk$set(echo = TRUE)
 packages = c("dplyr", "tidytext", "jiebaR", "gutenbergr", "stringr", "wordcloud2", "ggplot2", "tidyr", "scales")
 existing = as.character(installed.packages()[,1])
@@ -25,7 +26,7 @@ Hcomment = Hvideo[,c(2,13,15)]
 Ccomment = Cvideo[,c(2,13,15)]
 HCComment = rbind(Hcomment, Ccomment)
 library(kableExtra)
-kable(head(HCComment))
+
 ```
 
 ## 畫出韓國瑜 & 陳其邁的發文數量以及讀者回文數量
@@ -45,7 +46,7 @@ HCmessage = HCComment %>% group_by(Page_Name) %>%
   mutate(messageByName = paste0(Message, collapse = ""))
 id = which(duplicated(HCmessage$Page_Name) == FALSE)
 HCmessageAll = HCmessage[id,c(1,4)]
-kable(head(HCmessageAll))
+
 ```
 
 
@@ -106,10 +107,14 @@ tfidf1=td1 %>%
 t1=tfidf1%>%
   arrange(desc(tf_idf))
 
-head(td1,50)%>%select("word","n")%>%wordcloud2()
-
+td1=head(td1,50)%>%select("word","n")
 
 ```
+
+```{r}
+td1%>%wordcloud2()
+```
+
 
 
 
@@ -203,7 +208,7 @@ colnames(NewTAB) = c("words", HCmessageAll$Page_Name)
 rownames(NewTAB) = NewTAB$words
 NewTAB = NewTAB[,-1]
 NewTAB[is.na(NewTAB)] <- 0
-kable(NewTAB)
+
 ```
 
 ## 以此 DTM 畫出共現性關聯圖
@@ -251,7 +256,6 @@ colnames(NewTAB) = c("words", HCmessageAll$Page_Name)
 rownames(NewTAB) = NewTAB$words
 NewTAB = NewTAB[,-1]
 NewTAB[is.na(NewTAB)] <- 0
-kable(NewTAB)
 ```
 
 ## 以此 DTM 畫出共現性關聯圖
