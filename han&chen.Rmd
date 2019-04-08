@@ -77,6 +77,9 @@ all%>%group_by(Page_Name,Type)%>%summarize(n=n())%>%mutate(freq=n/sum(n))%>%ggpl
   ggtitle("貼文種類")+
   theme(plot.title = element_text(hjust = 0.5))
 
+
+all%>%group_by(Type)%>%ggplot(aes(Type,LIKE_COUNT))+
+  geom_bar(stat = "identity")
 ```
 
 
@@ -130,6 +133,32 @@ segment_han = apply(matrix(han_msg$messageByName), MARGIN = 1, myFUN)
 segment_chen= apply(matrix(chen_msg$messageByName), MARGIN = 1, myFUN)
 ```
 
+
+```{r}
+xseg = worker("tag",stop_word ="stopwords-u8.txt",user = "user.txt" ,encoding = "UTF-8",bylines = T) 
+xtext2 = NULL
+for (i in 1:length(all_msg$messageByName)){
+t0 = all_msg$messageByName[i]
+t1 = xseg <= t0
+xtext2 = c(xtext2,paste0(t1,collapse=" "))
+}
+
+text_df = data_frame(doc_id = 1:length(xtext2), text = xtext2)
+library(stringr)
+tok99 = function(t) str_split(t,"[ ]{1,}")
+
+td1 = unnest_tokens(text_df,word, text, token=tok99)
+
+td2 = td1 %>%
+count(doc_id,word,sort=T) %>%
+ungroup() %>%
+bind_tf_idf(word,doc_id, n)
+
+td_tfidf = arrange(td2,desc(tf_idf))
+
+td_tfidf
+```
+
 ## 篩選出詞頻較高者並做出文字雲
 ```{r}
 
@@ -138,8 +167,8 @@ chenfreq=data.frame(table(segment_chen[[1]]))
 
 top_han=hanfreq%>%arrange(desc(Freq))%>%head(150)
 top_chen=chenfreq%>%arrange(desc(Freq))%>%head(150)
-wordcloud(top_chen$Var1,top_chen$Freq)
-wordcloud(top_han$Var1,top_han$Freq)
+wordcloud(top_chen$Var1,top_chen$Freq,random.order = F, ordered.colors = F, colors=rainbow(1000))
+wordcloud(top_han$Var1,top_han$Freq,random.order = F, ordered.colors = F, colors=rainbow(1000))
 ```
 
 
@@ -184,6 +213,7 @@ top_terms <- dtm_topics %>%
   top_n(10, beta) %>%
   ungroup() %>%
   arrange(topic, -beta)
+
 top_terms %>%
   mutate(term = reorder(term, beta)) %>%
   ggplot(aes(term, beta, fill = factor(topic))) +
@@ -202,6 +232,7 @@ top_terms <- dtm_topics %>%
   top_n(10, beta) %>%
   ungroup() %>%
   arrange(topic, -beta)
+
 top_terms %>%
   mutate(term = reorder(term, beta)) %>%
   ggplot(aes(term, beta, fill = factor(topic))) +

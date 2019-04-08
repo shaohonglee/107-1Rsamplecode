@@ -96,8 +96,7 @@ td=segment(HCmessageAll$messageByName,cd)
 ```{r}
 library(tidytext)
 library(wordcloud2)
-sw=read.table("stopwords-u8.txt", header = F,sep="\r",quote = "", stringsAsFactors = F,encoding = "UTF-8")
-colnames(sw)="word"
+sw=read.table("stopwords-u8.txt", header = T,sep="\r",quote = "", stringsAsFactors = F,fileEncoding = "UTF-8-BOM",fill=T)
 td1 <-  X201809_data%>%
   unnest_tokens(word, Message)%>%
   anti_join(sw,by="word")%>%
